@@ -3,12 +3,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = require("@angular/core");
 var forms_1 = require("@angular/forms");
 var template_1 = require("./template");
-var moment = require("moment/moment");
+var dateFns = require('date-fns');
 var MultipleDatePickerComponent = (function () {
     function MultipleDatePickerComponent() {
         this.cssDaysOfSurroundingMonths = this.cssDaysOfSurroundingMonths || 'picker-empty';
         this.arrow = 0;
-        this.month = moment().startOf('day'); // today's day at start of day midnight or passed in value
+        this.month = dateFns.startOfToday(); // today's day at start of day midnight or passed in value
         this.projectScope = [];
         this.days = [];
         this.daysOff = this.daysOff || [];
@@ -25,7 +25,7 @@ var MultipleDatePickerComponent = (function () {
          * protection for calendar month adjustments -- otherwise will break upon loading
          */
         if (this.month === undefined) {
-            this.month = moment().startOf('day');
+            this.month = dateFns.startOfToday();
         }
         this.generate();
         this.daysOfWeek = this.getDaysOfWeek();
@@ -46,12 +46,12 @@ var MultipleDatePickerComponent = (function () {
             this.projectScope = value;
             if (value !== null) {
                 this.projectScope = this.projectScope.map(function (val) {
-                    return moment(val);
+                    return new Date(val);
                 });
                 this.projectScope.forEach(function (val) {
                     var day = val;
                     _this.days.forEach(function (d) {
-                        if (d.date.isSame(day)) {
+                        if (dateFns.isSameDay(d.date, day)) {
                             d.mdp.selected = true;
                             return;
                         }
@@ -76,13 +76,13 @@ var MultipleDatePickerComponent = (function () {
         configurable: true
     });
     MultipleDatePickerComponent.prototype.checkNavigationButtons = function () {
-        var today = moment(), previousMonth = moment(this.month).subtract(1, 'month'), nextMonth = moment(this.month).add(1, 'month');
-        this.disableBackButton = this.disableNavigation || (this.disallowBackPastMonths && today.isAfter(previousMonth, 'month'));
-        this.disableNextButton = this.disableNavigation || (this.disallowGoFuturMonths && today.isBefore(nextMonth, 'month'));
+        var today = new Date(), previousMonth = dateFns.subMonths(this.month, 1), nextMonth = dateFns.addMonths(this.month, 1);
+        this.disableBackButton = this.disableNavigation || (this.disallowBackPastMonths && dateFns.isAfter(dateFns.subDays(today,1), previousMonth));
+        this.disableNextButton = this.disableNavigation || (this.disallowGoFuturMonths && dateFns.isBefore(today, nextMonth));
     };
     MultipleDatePickerComponent.prototype.getDaysOfWeek = function () {
         /*To display days of week names in moment.lang*/
-        var momentDaysOfWeek = moment().localeData().weekdaysMin(), daysOfWeek = [];
+        var momentDaysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], daysOfWeek = [];
         for (var i = 1; i < 7; i++) {
             daysOfWeek.push(momentDaysOfWeek[i]);
         }
@@ -95,15 +95,15 @@ var MultipleDatePickerComponent = (function () {
         return daysOfWeek;
     };
     MultipleDatePickerComponent.prototype.getMonthYearToDisplay = function () {
-        var month = this.month.format('MMMM');
+        var month = dateFns.format(this.month, 'MMMM');
         return month.charAt(0).toUpperCase() + month.slice(1);
     };
     MultipleDatePickerComponent.prototype.getYearsForSelect = function () {
-        var now = moment(), changeYearPast = Math.max(0, parseInt(this.changeYearPast, 10) || 0), changeYearFuture = Math.max(0, parseInt(this.changeYearFuture, 10) || 0), min = moment(this.month).subtract(changeYearPast, 'year'), max = moment(this.month).add(changeYearFuture, 'year'), result = [];
-        max.add(1, 'year');
-        for (var m = moment(min); max.isAfter(m, 'year'); m.add(1, 'year')) {
-            if ((!this.disallowBackPastMonths || (m.isAfter(now, 'year') || m.isSame(now, 'year'))) && (!this.disallowGoFuturMonths || (m.isBefore(now, 'year') || m.isSame(now, 'year')))) {
-                result.push(m.format('YYYY'));
+        var now = new Date(), changeYearPast = Math.max(0, parseInt(this.changeYearPast, 10) || 0), changeYearFuture = Math.max(0, parseInt(this.changeYearFuture, 10) || 0), min = dateFns.subYears(this.month,changeYearPast), max = dateFns.addYears(this.month, changeYearFuture), result = [];
+        dateFns.addYears(max, 1);
+        for (var m = new Date(min); dateFns.isAfter(max, m); dateFns.addYears(m, 1)) {
+            if ((!this.disallowBackPastMonths || (dateFns.isAfter(m, now) || dateFns.isSameYear(m, now))) && (!this.disallowGoFuturMonths || (dateFns.isBefore(m, now) || dateFns.isSame(m, now)))) {
+                result.push(dateFns.format(m, 'YYYY'));
             }
         }
         return result;
@@ -138,14 +138,14 @@ var MultipleDatePickerComponent = (function () {
             else {
                 var idx = -1;
                 for (var i = 0; i < this.projectScope.length; ++i) {
-                    if (moment.isMoment(this.projectScope[i])) {
-                        if (this.projectScope[i].isSame(day.date, 'day')) {
+                    if (dateFns.isDate(this.projectScope[i])) {
+                        if (dateFns.isSameDay(this.projectScope[i],day.date)) {
                             idx = i;
                             break;
                         }
                     }
                     else {
-                        if (this.projectScope[i].date.isSame(day.date, 'day')) {
+                        if (dateFns.isSameDay(this.projectScope[i].date, day.date)) {
                             idx = i;
                             break;
                         }
@@ -223,12 +223,12 @@ var MultipleDatePickerComponent = (function () {
             // console.log('entered into preventDefault *****'); // for testing
             prevented = true;
         };
-        var monthTo = moment(this.month).add(add, 'month');
+        var monthTo = dateFns.addMonths(this.month, add);
         if (typeof this.monthClick == 'function') {
             this.monthClick(event, monthTo);
         }
         if (!prevented) {
-            var oldMonth = moment(this.month);
+            var oldMonth = new Date(this.month);
             this.month = monthTo;
             if (typeof this.monthChanged == 'function') {
                 this.monthChanged(this.month, oldMonth);
@@ -238,48 +238,63 @@ var MultipleDatePickerComponent = (function () {
     };
     /*Change year*/
     MultipleDatePickerComponent.prototype.changeYear = function (year) {
-        this.month = this.month.year(parseInt(year, 10));
+        this.month = this.month.getYear(parseInt(year, 10));
     };
     ;
     /*Check if the date is off : unselectable*/
     MultipleDatePickerComponent.prototype.isDayOff = function (day) {
         return this.allDaysOff ||
-            (this.disableDaysBefore && moment(day.date).isBefore(moment(), 'day')) ||
-            (!!this.disableDaysAfter && moment(day.date).isAfter(moment(), 'day')) ||
+            (this.disableDaysBefore && dateFns.isBefore(day.date, new Date())) ||
+            (!!this.disableDaysAfter && dateFns.isAfter(day.date, new Date())) ||
             ((this.weekDaysOff instanceof Array) && this.weekDaysOff.some(function (dayOff) {
-                return day.date.day() === dayOff;
+                return day.date.getDay() === dayOff;
             })) ||
             ((this.daysOff === Array) && this.daysOff.some(function (dayOff) {
-                return day.date.isSame(dayOff, 'day');
+                return dateFns.isSameDay(day.date, dayOff);
             })) ||
             ((this.daysAllowed === Array) && !this.daysAllowed.some(function (dayAllowed) {
-                return day.date.isSame(dayAllowed, 'day');
+                return dateFns.isSameDay(day.date, dayAllowed);
             })) ||
             ((Object.prototype.toString.call(this.highlightDays) === '[object Array]') && this.highlightDays.some(function (highlightDay) {
-                return day.date.isSame(highlightDay.date, 'day') && !highlightDay.selectable && highlightDay.css;
+                return dateFns.isSameDay(day.date, highlightDay.date) && !highlightDay.selectable && highlightDay.css;
             }));
     };
     /*Check if the date is selected*/
     MultipleDatePickerComponent.prototype.isSelected = function (day) {
         return this.projectScope.some(function (d) {
-            return day.date.isSame(d, 'day');
+            return dateFns.isSameDay(day.date, d);
         });
     };
     /*Generate the calendar*/
     MultipleDatePickerComponent.prototype.generate = function () {
         var _this = this;
-        var year = this.month.year().toString();
+        var year = this.month.getYear().toString();
         this.yearsForSelect = this.getYearsForSelect();
         this.monthToDisplay = this.getMonthYearToDisplay();
-        this.yearToDisplay = this.month.format('YYYY');
-        var previousDay = moment(this.month).date(0).day(this.sundayFirstDay ? 0 : 1).subtract(1, 'day');
-        if (moment(this.month).date(0).diff(previousDay, 'day') > 6) {
-            previousDay = previousDay.add(1, 'week');
+        this.yearToDisplay = dateFns.format(this.month, 'YYYY');
+        var previousDay = dateFns.setDate(this.month, 0);
+
+        previousDay = dateFns.setDay(previousDay, (this.sundayFirstDay ? 0 : 1));
+
+        previousDay = dateFns.subDays(previousDay, 1);
+
+        console.log(previousDay);
+
+
+        if (dateFns.differenceInDays(dateFns.setDate(this.month, 0), previousDay) > 6) {
+            previousDay = dateFns.addWeeks(previousDay, 1);
         }
-        var firstDayOfMonth = moment(this.month).date(1), days = [], now = moment(), lastDay = moment(firstDayOfMonth).endOf('month'), createDate = function () {
+
+        console.log(previousDay);
+
+
+
+
+        var firstDayOfMonth = dateFns.setDate(this.month, 1), days = [], now = Date(), lastDay = dateFns.endOfMonth(this.month), createDate = function () {
+            previousDay = dateFns.addDays(previousDay, 1);
             var day = {
                 selectable: true,
-                date: moment(previousDay.add(1, 'day')),
+                date: previousDay,
                 css: null,
                 title: '',
                 mdp: {
@@ -292,24 +307,25 @@ var MultipleDatePickerComponent = (function () {
             };
             if ((Object.prototype.toString.call(_this.highlightDays) === '[object Array]')) {
                 var hlDay = _this.highlightDays.filter(function (d) {
-                    return day.date.isSame(d.date, 'day');
+                    return dateFns.isSameDay(day.date, d.date);
                 });
                 day.css = hlDay.length > 0 ? hlDay[0].css : '';
-                day.title = hlDay.length > 0 ? hlDay[0].title : '';
+                day.title = hlDay.length > 0 ? hlDay[0].title : 't';
             }
             day.selectable = !_this.isDayOff(day);
             day.mdp.selected = _this.isSelected(day);
-            day.mdp.today = day.date.isSame(now, 'day');
-            day.mdp.past = day.date.isBefore(now, 'day');
-            day.mdp.future = day.date.isAfter(now, 'day');
-            if (!day.date.isSame(_this.month, 'month')) {
+            day.mdp.today = dateFns.isSameDay(day.date, now);
+            day.mdp.past = dateFns.isBefore(day.date, now);
+            day.mdp.future = dateFns.isAfter(day.date,now);
+            if (!dateFns.isSameMonth(day.date, _this.month)) {
                 day.mdp.otherMonth = true;
+                // console.log(_this.month);
             }
             return day;
         };
-        var maxDays = lastDay.diff(previousDay, 'days'), lastDayOfWeek = this.sundayFirstDay ? 6 : 0;
-        if (lastDay.day() !== lastDayOfWeek) {
-            maxDays += (this.sundayFirstDay ? 6 : 7) - lastDay.day();
+        var maxDays = dateFns.differenceInDays(lastDay, previousDay), lastDayOfWeek = this.sundayFirstDay ? 6 : 0;
+        if (lastDay.getDay() !== lastDayOfWeek) {
+            maxDays += (this.sundayFirstDay ? 6 : 7) - lastDay.getDay();
         }
         for (var j = 0; j < maxDays; j++) {
             days.push(createDate());

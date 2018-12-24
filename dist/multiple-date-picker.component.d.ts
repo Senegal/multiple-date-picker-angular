@@ -1,6 +1,7 @@
 import { OnInit } from '@angular/core';
 import { ControlValueAccessor } from '@angular/forms';
-import * as moment from 'moment/moment';
+// import * as moment from 'moment/moment';
+import * as dateFns from 'date-fns';
 export declare class MultipleDatePickerComponent implements OnInit, ControlValueAccessor {
     highlightDays: Array<any>;
     dayClick: any;
@@ -25,7 +26,7 @@ export declare class MultipleDatePickerComponent implements OnInit, ControlValue
     changeYearFuture: string;
     arrow: number;
     monthAdjustment: any;
-    month: moment.Moment;
+    month: Date;
     projectScope: Array<any>;
     days: Array<any>;
     daysOff: any;
